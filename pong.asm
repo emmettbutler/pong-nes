@@ -15,13 +15,16 @@ ballright      .rs 1  ; 1 = ball moving right
 bally          .rs 1
 ballx          .rs 1
 rtpaddley      .rs 1
+rtpaddlebottom .rs 1
 rtPaddlePtr    .rs 1
 rtPaddlePtrHi  .rs 1
 paddleSpace    .rs 1
 paddleSpeed    .rs 1
+paddleHeight   .rs 1
 ballspeedx     .rs 1
 ballspeedy     .rs 1
 
+RTPADDLE       = $F0
 RIGHTWALL      = $F4  ; when ball reaches one of these, do something
 TOPWALL        = $20
 BOTTOMWALL     = $E0
@@ -112,7 +115,7 @@ LoadSpritesLoop:
   STA ballspeedx
   STA ballspeedy
 
-  LDA #$02
+  LDA #$04
   STA paddleSpeed
 
   LDA #$00
@@ -121,6 +124,9 @@ LoadSpritesLoop:
   LDA #$01
   STA ballup
   STA ballleft
+
+  LDA #$40
+  STA paddleHeight
 
   LDA #$02
   STA rtPaddlePtrHi
@@ -164,6 +170,9 @@ MoveRightPaddleUp:
   SEC
   SBC paddleSpeed
   STA rtpaddley
+  CLC
+  ADC paddleHeight
+  STA rtpaddlebottom
 MoveRightPaddleUpDone:
 MoveRightPaddleDown:
   LDA buttons
@@ -174,6 +183,8 @@ MoveRightPaddleDown:
   CLC
   ADC paddleSpeed
   STA rtpaddley
+  ADC paddleHeight
+  STA rtpaddlebottom
 MoveRightPaddleDownDone:
 
 
@@ -241,12 +252,13 @@ MoveBallRight:
   STA ballx
 
   LDA ballx
-  CMP #RIGHTWALL
+  CMP #RTPADDLE
   BCC MoveBallRightDone
-  LDA #$01
-  STA ballleft
-  LDA #$00
-  STA ballright
+  JMP CheckBallPaddleCollide
+
+CheckBallPaddleCollide:
+  JSR CollideBallPaddle
+
 MoveBallRightDone:
 
   JSR UpdateSprites
@@ -254,6 +266,21 @@ MoveBallRightDone:
   RTI             ; return from interrupt
 
 ;;;;;;;;;;;;;;
+
+CollideBallPaddle:
+  LDA bally
+  CMP rtpaddley
+  BMI CollideDone
+  CLC
+  CMP rtpaddlebottom
+  BPL CollideDone
+
+  LDA #$01
+  STA ballleft
+  LDA #$00
+  STA ballright
+CollideDone:
+  RTS
 
 UpdateSprites:
   LDA bally  ; update all ball sprite info
@@ -310,10 +337,10 @@ palette:
 sprites:
      ;vert tile attr horiz
   .db $80, $32, $00, $80   ;ball, 0200
-  .db $80, $32, $00, $f0   ;rt paddle top, 0204
-  .db $87, $32, $00, $f0   ;rt paddle next, 0208
-  .db $8E, $32, $00, $f0   ;rt paddle next, 020C
-  .db $95, $32, $00, $f0   ;rt paddle next, 0210
+  .db $80, $32, $00, $F0 ;rt paddle top, 0204
+  .db $87, $32, $00, $F0 ;rt paddle next, 0208
+  .db $8E, $32, $00, $F0 ;rt paddle next, 020C
+  .db $95, $32, $00, $F0 ;rt paddle next, 0210
 
   .org $FFFA     ;first of the three vectors starts here
   .dw NMI        ;when an NMI happens (once per frame if enabled) the
