@@ -7,17 +7,22 @@
 ;;;;;;;;;;;;;;;
 
   .rsset $0000
-buttons        .rs 1
+buttonsP1      .rs 1
+buttonsP2      .rs 1
 ballup         .rs 1  ; 1 = ball moving up
 balldown       .rs 1  ; 1 = ball moving down
 ballleft       .rs 1  ; 1 = ball moving left
 ballright      .rs 1  ; 1 = ball moving right
 bally          .rs 1
 ballx          .rs 1
-rtpaddley      .rs 1
-rtpaddlebottom .rs 1
+rtPaddleTop    .rs 1
+rtPaddleBottom .rs 1
 rtPaddlePtr    .rs 1
 rtPaddlePtrHi  .rs 1
+lfPaddleTop    .rs 1
+lfPaddleBottom .rs 1
+lfPaddlePtr    .rs 1
+lfPaddlePtrHi  .rs 1
 paddleSpace    .rs 1
 paddleSpeed    .rs 1
 paddleHeight   .rs 1
@@ -25,6 +30,7 @@ ballspeedx     .rs 1
 ballspeedy     .rs 1
 
 RTPADDLE       = $F0
+LFPADDLE       = $08
 RIGHTWALL      = $F4  ; when ball reaches one of these, do something
 TOPWALL        = $20
 BOTTOMWALL     = $E0
@@ -92,7 +98,7 @@ LoadSpritesLoop:
   LDA sprites, x        ; load data from address (sprites +  x)
   STA $0200, x          ; store into RAM address ($0200 + x)
   INX                   ; X = X + 1
-  CPX #$20              ; Compare X to hex $20, decimal 32
+  CPX #$80              ; Compare X to hex $20, decimal 32
   BNE LoadSpritesLoop   ; Branch to LoadSpritesLoop if compare was Not Equal to zero
                         ; if compare was equal to 32, keep going down
 
@@ -133,11 +139,17 @@ LoadSpritesLoop:
   LDA #$04
   STA rtPaddlePtr
 
+  LDA #$02
+  STA lfPaddlePtrHi
+  LDA #$1C
+  STA lfPaddlePtr
+
   LDA #$80
-  STA rtpaddley
+  STA rtPaddleTop
+  STA lfPaddleTop
   CLC
   ADC paddleHeight
-  STA rtpaddlebottom
+  STA rtPaddleBottom
 
 
 Forever:
@@ -152,50 +164,94 @@ NMI:
   STA $4014       ; set the high byte (02) of the RAM address, start the transfer
 
 
-ReadController:
+;;;;;;;;;;;;;;;;;;;
+ReadController1:
   LDA #$01
   STA $4016
   LDA #$00
   STA $4016
   LDX #$08
-ReadControllerLoop:
+ReadController1Loop:
   LDA $4016
-  LSR A           ; bit0 -> Carry
-  ROL buttons     ; bit0 <- Carry
+  LSR A
+  ROL buttonsP1
   DEX
-  BNE ReadControllerLoop
+  BNE ReadController1Loop
 
+ReadController2:
+  LDA #$01
+  STA $4017
+  LDA #$00
+  STA $4017
+  LDX #$08
+ReadController2Loop:
+  LDA $4017
+  LSR A
+  ROL buttonsP2
+  DEX
+  BNE ReadController2Loop
+;;;;;;;;;;;;;;;;;;;;;
 
 MoveRightPaddle:
 MoveRightPaddleUp:
-  LDA buttons
-  AND #%00001000
+  LDA buttonsP2
+  AND #%00001010
   BEQ MoveRightPaddleUpDone
 
-  LDA rtpaddley
+  LDA rtPaddleTop
   CMP #TOPWALL
   BCC MoveRightPaddleUpDone
 
-  LDA rtpaddley
+  LDA rtPaddleTop
   SEC
   SBC paddleSpeed
-  STA rtpaddley
+  STA rtPaddleTop
 MoveRightPaddleUpDone:
 MoveRightPaddleDown:
-  LDA buttons
-  AND #%00000100
+  LDA buttonsP2
+  AND #%00000101
   BEQ MoveRightPaddleDownDone
 
-  LDA rtpaddlebottom
+  LDA rtPaddleBottom
   CMP #BOTTOMWALL
   BCS MoveRightPaddleDownDone
 
-  LDA rtpaddley
+  LDA rtPaddleTop
   CLC
   ADC paddleSpeed
-  STA rtpaddley
+  STA rtPaddleTop
 MoveRightPaddleDownDone:
 
+MoveLeftPaddle:
+MoveLeftPaddleUp:
+  LDA buttonsP1
+  AND #%00001010
+  BEQ MoveLeftPaddleUpDone
+
+  LDA lfPaddleTop
+  CMP #TOPWALL
+  BCC MoveLeftPaddleUpDone
+
+  LDA lfPaddleTop
+  SEC
+  SBC paddleSpeed
+  STA lfPaddleTop
+MoveLeftPaddleUpDone:
+MoveLeftPaddleDown:
+  LDA buttonsP1
+  AND #%00000101
+  BEQ MoveLeftPaddleDownDone
+
+  LDA lfPaddleBottom
+  CMP #BOTTOMWALL
+  BCS MoveLeftPaddleDownDone
+
+  LDA lfPaddleTop
+  CLC
+  ADC paddleSpeed
+  STA lfPaddleTop
+MoveLeftPaddleDownDone:
+;;;;;;;;;;;;;;;;;;;;
 
 MoveBallDown:
   LDA balldown
@@ -263,9 +319,6 @@ MoveBallRight:
   LDA ballx
   CMP #RTPADDLE
   BCC MoveBallRightDone
-  JMP CheckBallPaddleCollide
-
-CheckBallPaddleCollide:
   JSR CollideBallPaddle
 
 MoveBallRightDone:
@@ -278,10 +331,10 @@ MoveBallRightDone:
 
 CollideBallPaddle:
   LDA bally
-  CMP rtpaddley
+  CMP rtPaddleTop
   BMI CollideDone
   CLC
-  CMP rtpaddlebottom
+  CMP rtPaddleBottom
   BPL CollideDone
 
   LDA #$01
@@ -304,20 +357,24 @@ UpdateSprites:
   LDA ballx
   STA $0203
 
-  JSR UpdateRtPaddle
+  JSR UpdatePaddle
 
   RTS
 
 
-UpdateRtPaddle:
+UpdatePaddle:
   LDY #$00
   LDA #$00
   STA paddleSpace
-UpdateRtPaddleLoop:
-  LDA rtpaddley
+UpdatePaddleLoop:
+  LDA rtPaddleTop
   CLC
   ADC paddleSpace
   STA [rtPaddlePtr], y
+  LDA lfPaddleTop
+  CLC
+  ADC paddleSpace
+  STA [lfPaddlePtr], y
 
   TYA
   CLC
@@ -330,12 +387,18 @@ UpdateRtPaddleLoop:
   STA paddleSpace
 
   CPY #$18  ; number of paddle segments times #$04
-  BNE UpdateRtPaddleLoop
-UpdateRtPaddleLoopDone:
-  LDA rtpaddley
+  BNE UpdatePaddleLoop
+UpdatePaddleLoopDone:
+  ; keep paddle bottom in sync with where the paddle is
+  LDA rtPaddleTop
   CLC
   ADC paddleHeight
-  STA rtpaddlebottom
+  STA rtPaddleBottom
+
+  LDA lfPaddleTop
+  CLC
+  ADC paddleHeight
+  STA lfPaddleBottom
 
   RTS
 
@@ -356,6 +419,12 @@ sprites:
   .db $95, $32, $00, $F0 ;rt paddle next, 0210
   .db $9C, $32, $00, $F0 ;rt paddle next, 0214
   .db $A3, $32, $00, $F0 ;rt paddle next, 0218
+  .db $80, $32, $00, $08 ;lf paddle top,  021C
+  .db $87, $32, $00, $08 ;lf paddle next, 0220
+  .db $8E, $32, $00, $08 ;lf paddle next, 0224
+  .db $95, $32, $00, $08 ;lf paddle next, 0228
+  .db $9C, $32, $00, $08 ;lf paddle next, 022C
+  .db $A3, $32, $00, $08 ;lf paddle next, 0230
 
   .org $FFFA
   .dw NMI
