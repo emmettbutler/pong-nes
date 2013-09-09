@@ -28,6 +28,7 @@ paddleSpeed    .rs 1
 paddleHeight   .rs 1
 ballspeedx     .rs 1
 ballspeedy     .rs 1
+randCur        .rs 1
 
 RTPADDLE       = $F0
 LFPADDLE       = $08
@@ -150,6 +151,9 @@ LoadSpritesLoop:
   CLC
   ADC paddleHeight
   STA rtPaddleBottom
+
+  LDA #$69  ; random seed
+  STA randCur
 
 
 Forever:
@@ -333,6 +337,8 @@ CheckRightPaddleCollision:
   CMP rtPaddleBottom  ; if ballY > rtPaddleBottom, done
   BPL CollideRDone
 
+  JSR RandomBallSpeed
+
   LDA #$01
   STA ballleft
   LDA #$00
@@ -348,6 +354,8 @@ CheckLeftPaddleCollision:
   CLC
   CMP lfPaddleBottom
   BPL CollideLDone
+
+  JSR RandomBallSpeed
 
   LDA #$00
   STA ballleft
@@ -414,7 +422,37 @@ UpdatePaddleLoopDone:
 
   RTS
 
+;;;;;;;;;;;;;;;;;;;;;
+RandomNumber:
+  ; Some sorta random number generator
+  ; http://www.programmersheaven.com/mb/Console/100277/100277/nes-random-numbers/
+  LDA randCur
+  EOR #$AA
+  CLC
+  ADC #$49
+  STA randCur  ; place resulting random number in randCur
+  RTS
 
+
+RandomBallSpeed:
+  JSR RandomNumber
+  LDA randCur
+  LDY #$00
+ShiftLoop:
+  LSR A
+  INY
+  CPY #$05
+  BCC ShiftLoop
+ShiftLoopDone:
+  CMP #$00
+  BCC SetSpeed
+  CLC
+  ADC #$02
+SetSpeed:
+  STA ballspeedx
+  STA ballspeedy
+
+  RTS
 
   .bank 1
   .org $E000
