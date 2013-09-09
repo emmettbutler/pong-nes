@@ -111,7 +111,7 @@ LoadSpritesLoop:
   LDA #$80
   STA ballx
 
-  LDA #$02
+  LDA #$04
   STA ballspeedx
   STA ballspeedy
 
@@ -125,13 +125,19 @@ LoadSpritesLoop:
   STA ballup
   STA ballleft
 
-  LDA #$40
+  LDA #$3C  ; number of paddle segments times #$0A
   STA paddleHeight
 
   LDA #$02
   STA rtPaddlePtrHi
   LDA #$04
   STA rtPaddlePtr
+
+  LDA #$80
+  STA rtpaddley
+  CLC
+  ADC paddleHeight
+  STA rtpaddlebottom
 
 
 Forever:
@@ -167,24 +173,27 @@ MoveRightPaddleUp:
   BEQ MoveRightPaddleUpDone
 
   LDA rtpaddley
+  CMP #TOPWALL
+  BCC MoveRightPaddleUpDone
+
+  LDA rtpaddley
   SEC
   SBC paddleSpeed
   STA rtpaddley
-  CLC
-  ADC paddleHeight
-  STA rtpaddlebottom
 MoveRightPaddleUpDone:
 MoveRightPaddleDown:
   LDA buttons
   AND #%00000100
   BEQ MoveRightPaddleDownDone
 
+  LDA rtpaddlebottom
+  CMP #BOTTOMWALL
+  BCS MoveRightPaddleDownDone
+
   LDA rtpaddley
   CLC
   ADC paddleSpeed
   STA rtpaddley
-  ADC paddleHeight
-  STA rtpaddlebottom
 MoveRightPaddleDownDone:
 
 
@@ -283,7 +292,7 @@ CollideDone:
   RTS
 
 UpdateSprites:
-  LDA bally  ; update all ball sprite info
+  LDA bally
   STA $0200
 
   LDA #$30
@@ -320,9 +329,13 @@ UpdateRtPaddleLoop:
   ADC #$0A
   STA paddleSpace
 
-  CPY #$10
+  CPY #$18  ; number of paddle segments times #$04
   BNE UpdateRtPaddleLoop
 UpdateRtPaddleLoopDone:
+  LDA rtpaddley
+  CLC
+  ADC paddleHeight
+  STA rtpaddlebottom
 
   RTS
 
@@ -341,13 +354,13 @@ sprites:
   .db $87, $32, $00, $F0 ;rt paddle next, 0208
   .db $8E, $32, $00, $F0 ;rt paddle next, 020C
   .db $95, $32, $00, $F0 ;rt paddle next, 0210
+  .db $9C, $32, $00, $F0 ;rt paddle next, 0214
+  .db $A3, $32, $00, $F0 ;rt paddle next, 0218
 
-  .org $FFFA     ;first of the three vectors starts here
-  .dw NMI        ;when an NMI happens (once per frame if enabled) the
-                   ;processor will jump to the label NMI:
-  .dw RESET      ;when the processor first turns on or is reset, it will jump
-                   ;to the label RESET:
-  .dw 0          ;external interrupt IRQ is not used in this tutorial
+  .org $FFFA
+  .dw NMI
+  .dw RESET
+  .dw 0
 
 
 ;;;;;;;;;;;;;;
@@ -355,4 +368,4 @@ sprites:
 
   .bank 2
   .org $0000
-  .incbin "mario.chr"   ;includes 8KB graphics file from SMB1
+  .incbin "mario.chr"
