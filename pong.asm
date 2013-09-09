@@ -9,12 +9,12 @@
   .rsset $0000
 buttonsP1      .rs 1
 buttonsP2      .rs 1
-ballup         .rs 1  ; 1 = ball moving up
-balldown       .rs 1  ; 1 = ball moving down
-ballleft       .rs 1  ; 1 = ball moving left
-ballright      .rs 1  ; 1 = ball moving right
+ballUp         .rs 1  ; 1 = ball moving up
+ballDown       .rs 1  ; 1 = ball moving down
+ballLeft       .rs 1  ; 1 = ball moving left
+ballRight      .rs 1  ; 1 = ball moving right
 ballY          .rs 1
-ballx          .rs 1
+ballX          .rs 1
 rtPaddleTop    .rs 1
 rtPaddleBottom .rs 1
 rtPaddlePtr    .rs 1
@@ -26,8 +26,8 @@ lfPaddlePtrHi  .rs 1
 paddleSpace    .rs 1
 paddleSpeed    .rs 1
 paddleHeight   .rs 1
-ballspeedx     .rs 1
-ballspeedy     .rs 1
+ballSpeedX     .rs 1
+ballSpeedY     .rs 1
 randCur        .rs 1
 
 RTPADDLE       = $F0
@@ -116,21 +116,21 @@ LoadSpritesLoop:
   STA ballY
 
   LDA #$80
-  STA ballx
+  STA ballX
 
   LDA #$04
-  STA ballspeedx
-  STA ballspeedy
+  STA ballSpeedX
+  STA ballSpeedY
 
   LDA #$04
   STA paddleSpeed
 
   LDA #$00
-  STA balldown
-  STA ballright
+  STA ballDown
+  STA ballRight
   LDA #$01
-  STA ballup
-  STA ballleft
+  STA ballUp
+  STA ballLeft
 
   LDA #$3C  ; number of paddle segments times #$0A
   STA paddleHeight
@@ -258,66 +258,66 @@ MoveLeftPaddleDownDone:
 ;;;;;;;;;;;;;;;;;;;;
 
 MoveBallDown:
-  LDA balldown
+  LDA ballDown
   BEQ MoveBallDownDone
 
   LDA ballY
   CLC
-  ADC ballspeedy
+  ADC ballSpeedY
   STA ballY
 
   LDA ballY
   CMP #BOTTOMWALL
   BCC MoveBallDownDone
   LDA #$00
-  STA balldown
+  STA ballDown
   LDA #$01
-  STA ballup
+  STA ballUp
 MoveBallDownDone:
 
 MoveBallUp:
-  LDA ballup
+  LDA ballUp
   BEQ MoveBallUpDone
 
   LDA ballY
   SEC
-  SBC ballspeedy
+  SBC ballSpeedY
   STA ballY
 
   LDA ballY
   CMP #TOPWALL
   BCS MoveBallUpDone
   LDA #$01
-  STA balldown
+  STA ballDown
   LDA #$00
-  STA ballup
+  STA ballUp
 MoveBallUpDone:
 
 MoveBallLeft:
-  LDA ballleft
+  LDA ballLeft
   BEQ MoveBallLeftDone
 
-  LDA ballx
+  LDA ballX
   SEC
-  SBC ballspeedx
-  STA ballx
+  SBC ballSpeedX
+  STA ballX
 
-  LDA ballx
+  LDA ballX
   CMP #LFPADDLE
   BCS MoveBallLeftDone
   JSR CollideBallLeftPaddle
 MoveBallLeftDone:
 
 MoveBallRight:
-  LDA ballright
+  LDA ballRight
   BEQ MoveBallRightDone
 
-  LDA ballx
+  LDA ballX
   CLC
-  ADC ballspeedx
-  STA ballx
+  ADC ballSpeedX
+  STA ballX
 
-  LDA ballx
+  LDA ballX
   CMP #RTPADDLE
   BCC MoveBallRightDone
   JSR CollideBallRightPaddle
@@ -340,9 +340,9 @@ CheckRightPaddleCollision:
   JSR RandomBallSpeed
 
   LDA #$01
-  STA ballleft
+  STA ballLeft
   LDA #$00
-  STA ballright
+  STA ballRight
 CollideRDone:
   RTS
 
@@ -358,9 +358,9 @@ CheckLeftPaddleCollision:
   JSR RandomBallSpeed
 
   LDA #$00
-  STA ballleft
+  STA ballLeft
   LDA #$01
-  STA ballright
+  STA ballRight
 CollideLDone:
   RTS
 
@@ -374,7 +374,7 @@ UpdateSprites:
   LDA #$00
   STA $0202
 
-  LDA ballx
+  LDA ballX
   STA $0203
 
   JSR UpdatePaddle
@@ -449,8 +449,8 @@ ShiftLoopDone:
   CLC
   ADC #$02
 SetSpeed:
-  STA ballspeedx
-  STA ballspeedy
+  STA ballSpeedX
+  STA ballSpeedY
 
   RTS
 
