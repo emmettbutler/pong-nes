@@ -13,7 +13,7 @@ ballup         .rs 1  ; 1 = ball moving up
 balldown       .rs 1  ; 1 = ball moving down
 ballleft       .rs 1  ; 1 = ball moving left
 ballright      .rs 1  ; 1 = ball moving right
-bally          .rs 1
+ballY          .rs 1
 ballx          .rs 1
 rtPaddleTop    .rs 1
 rtPaddleBottom .rs 1
@@ -112,7 +112,7 @@ LoadSpritesLoop:
 
   ; init ball position
   LDA #$50
-  STA bally
+  STA ballY
 
   LDA #$80
   STA ballx
@@ -257,12 +257,12 @@ MoveBallDown:
   LDA balldown
   BEQ MoveBallDownDone
 
-  LDA bally
+  LDA ballY
   CLC
   ADC ballspeedy
-  STA bally
+  STA ballY
 
-  LDA bally
+  LDA ballY
   CMP #BOTTOMWALL
   BCC MoveBallDownDone
   LDA #$00
@@ -275,12 +275,12 @@ MoveBallUp:
   LDA ballup
   BEQ MoveBallUpDone
 
-  LDA bally
+  LDA ballY
   SEC
   SBC ballspeedy
-  STA bally
+  STA ballY
 
-  LDA bally
+  LDA ballY
   CMP #TOPWALL
   BCS MoveBallUpDone
   LDA #$01
@@ -299,12 +299,9 @@ MoveBallLeft:
   STA ballx
 
   LDA ballx
-  CMP #LEFTWALL
+  CMP #LFPADDLE
   BCS MoveBallLeftDone
-  LDA #$00
-  STA ballleft
-  LDA #$01
-  STA ballright
+  JSR CollideBallLeftPaddle
 MoveBallLeftDone:
 
 MoveBallRight:
@@ -319,33 +316,48 @@ MoveBallRight:
   LDA ballx
   CMP #RTPADDLE
   BCC MoveBallRightDone
-  JSR CollideBallPaddle
-
+  JSR CollideBallRightPaddle
 MoveBallRightDone:
 
   JSR UpdateSprites
 
-  RTI             ; return from interrupt
-
+  RTI
 ;;;;;;;;;;;;;;
 
-CollideBallPaddle:
-  LDA bally
+CollideBallRightPaddle:
+CheckRightPaddleCollision:
+  LDA ballY
   CMP rtPaddleTop
-  BMI CollideDone
+  BMI CollideRDone  ; if ballY < rtPaddleTop, done
   CLC
-  CMP rtPaddleBottom
-  BPL CollideDone
+  CMP rtPaddleBottom  ; if ballY > rtPaddleBottom, done
+  BPL CollideRDone
 
   LDA #$01
   STA ballleft
   LDA #$00
   STA ballright
-CollideDone:
+CollideRDone:
+  RTS
+
+CollideBallLeftPaddle:
+CheckLeftPaddleCollision:
+  LDA ballY
+  CMP lfPaddleTop
+  BMI CollideLDone
+  CLC
+  CMP lfPaddleBottom
+  BPL CollideLDone
+
+  LDA #$00
+  STA ballleft
+  LDA #$01
+  STA ballright
+CollideLDone:
   RTS
 
 UpdateSprites:
-  LDA bally
+  LDA ballY
   STA $0200
 
   LDA #$30
