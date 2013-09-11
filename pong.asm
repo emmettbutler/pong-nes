@@ -32,6 +32,8 @@ randCur        .rs 1
 timer          .rs 1
 stateNewGame   .rs 1
 stateInGame    .rs 1
+lfPlayerScore  .rs 1
+rtPlayerScore  .rs 1
 
 RTPADDLE       = $F0
 LFPADDLE       = $08
@@ -39,7 +41,7 @@ RIGHTWALL      = $F4  ; when ball reaches one of these, do something
 TOPWALL        = $20
 BOTTOMWALL     = $E0
 LEFTWALL       = $04
-NEWGAMETIME    = $40
+NEWGAMETIME    = $40  ; number of frames to wait before starting new game
 
 ;;;;;;;;;;;;;;;
 
@@ -164,6 +166,8 @@ LoadSpritesLoop:
   STA stateNewGame
   LDA #$00
   STA stateInGame
+  STA lfPlayerScore
+  STA rtPlayerScore
 
 
 Forever:
@@ -398,6 +402,7 @@ BallMissedRightPaddle:
   LDA #$80
   STA ballX
   STA ballY
+  INC lfPlayerScore
   JSR EndGame
 CollideRDone:
   RTS
@@ -421,6 +426,7 @@ BallMissedLeftPaddle:
   LDA #$80
   STA ballX
   STA ballY
+  INC rtPlayerScore
   JSR EndGame
 CollideLDone:
   RTS
