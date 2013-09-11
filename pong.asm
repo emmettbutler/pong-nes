@@ -29,6 +29,9 @@ paddleHeight   .rs 1
 ballSpeedX     .rs 1
 ballSpeedY     .rs 1
 randCur        .rs 1
+timer          .rs 1
+stateNewGame   .rs 1
+stateInGame    .rs 1
 
 RTPADDLE       = $F0
 LFPADDLE       = $08
@@ -36,6 +39,7 @@ RIGHTWALL      = $F4  ; when ball reaches one of these, do something
 TOPWALL        = $20
 BOTTOMWALL     = $E0
 LEFTWALL       = $04
+NEWGAMETIME    = $40
 
 ;;;;;;;;;;;;;;;
 
@@ -128,6 +132,7 @@ LoadSpritesLoop:
   LDA #$00
   STA ballDown
   STA ballRight
+  STA timer
   LDA #$01
   STA ballUp
   STA ballLeft
@@ -154,6 +159,11 @@ LoadSpritesLoop:
 
   LDA #$69  ; random seed
   STA randCur
+
+  LDA #$01
+  STA stateNewGame
+  LDA #$00
+  STA stateInGame
 
 
 Forever:
@@ -257,6 +267,16 @@ MoveLeftPaddleDown:
 MoveLeftPaddleDownDone:
 ;;;;;;;;;;;;;;;;;;;;
 
+  JSR UpdateSprites
+
+SwitchOnState:
+  LDA stateNewGame
+  BEQ InGameLoop
+  LDA stateInGame
+  BEQ NewGameLoop
+
+InGameLoop:
+;;;;;;;;;;;;;;;;;;;;
 MoveBallDown:
   LDA ballDown
   BEQ MoveBallDownDone
@@ -322,27 +342,63 @@ MoveBallRight:
   BCC MoveBallRightDone
   JSR CollideBallRightPaddle
 MoveBallRightDone:
+  JMP MainLoopDone
+InGameLoopDone:
 
-  JSR UpdateSprites
+NewGameLoop:
+  LDA timer
+  CMP #NEWGAMETIME
+  BCC NewGameLoopDone
+  JSR StartGame
+  LDA #$01
+  STA ballDown
+  STA ballRight
+  LDA #$00
+  STA ballUp
+  STA ballLeft
 
+  JMP MainLoopDone
+NewGameLoopDone:
+
+MainLoopDone:
   RTI
-;;;;;;;;;;;;;;
+;;;;;;;;;;;;;; SUBROUTINES ;;;;;;;;;;;;;;;;
+
+StartGame:
+  LDA #$00
+  STA stateNewGame
+  LDA #$01
+  STA stateInGame
+  RTS
+
+EndGame:
+  LDA #$01
+  STA stateNewGame
+  LDA #$00
+  STA stateInGame
+  STA timer
+  RTS
 
 CollideBallRightPaddle:
 CheckRightPaddleCollision:
   LDA ballY
   CMP rtPaddleTop
-  BMI CollideRDone  ; if ballY < rtPaddleTop, done
+  BMI BallMissedRightPaddle  ; if ballY < rtPaddleTop, done
   CLC
   CMP rtPaddleBottom  ; if ballY > rtPaddleBottom, done
-  BPL CollideRDone
+  BPL BallMissedRightPaddle
 
-  JSR RandomBallSpeed
-
+  ;JSR RandomBallSpeed
   LDA #$01
   STA ballLeft
   LDA #$00
   STA ballRight
+  JMP CollideRDone
+BallMissedRightPaddle:
+  LDA #$80
+  STA ballX
+  STA ballY
+  JSR EndGame
 CollideRDone:
   RTS
 
@@ -350,37 +406,40 @@ CollideBallLeftPaddle:
 CheckLeftPaddleCollision:
   LDA ballY
   CMP lfPaddleTop
-  BMI CollideLDone
+  BMI BallMissedLeftPaddle
   CLC
   CMP lfPaddleBottom
-  BPL CollideLDone
+  BPL BallMissedLeftPaddle
 
-  JSR RandomBallSpeed
-
+  ;JSR RandomBallSpeed
   LDA #$00
   STA ballLeft
   LDA #$01
   STA ballRight
+  JMP CollideLDone
+BallMissedLeftPaddle:
+  LDA #$80
+  STA ballX
+  STA ballY
+  JSR EndGame
 CollideLDone:
   RTS
 
 UpdateSprites:
+  INC timer
+
   LDA ballY
   STA $0200
-
   LDA #$30
   STA $0201
-
   LDA #$00
   STA $0202
-
   LDA ballX
   STA $0203
 
   JSR UpdatePaddle
 
   RTS
-
 
 UpdatePaddle:
   LDY #$00
